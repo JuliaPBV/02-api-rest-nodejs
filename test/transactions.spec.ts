@@ -13,11 +13,11 @@ describe("Transactions routes", () => {
   });
 
   beforeEach(() => {
-    execSync("pnpm run kenex migrate:rollback --all");
-    execSync("pnpm run kenx migrate:latest");
+    execSync("npx knex migrate:rollback --all");
+    execSync("npx knex migrate:latest");
   });
 
-  it("should be able to create anew  transaction", async () => {
+  it("should be able to create a new transaction", async () => {
     const response = await request(app.server)
       .post("/transactions")
       .send({
@@ -28,7 +28,7 @@ describe("Transactions routes", () => {
       .expect(201);
   });
 
-  it("should be able ti list al transaction", async () => {
+  it("should be able to list all transactions", async () => {
     const createTransactionResponse = await request(app.server)
       .post("/transactions")
       .send({
@@ -44,11 +44,65 @@ describe("Transactions routes", () => {
       .set("Cookie", cookies!)
       .expect(200);
 
-    expect(ListTransactionResponse.body.transaction).toEqual([
+    expect(ListTransactionResponse.body.transactions).toEqual([
       expect.objectContaining({
         title: "New transaction",
         amount: 5000,
       }),
     ]);
+  });
+
+  it("should be able to get a specific transaction", async () => {
+    const createTransactionResponse = await request(app.server)
+      .post("/transactions")
+      .send({
+        title: "New transaction",
+        amount: 5000,
+        type: "credit",
+      });
+
+    const cookies = createTransactionResponse.get("Set-Cookie");
+
+    const ListTransactionResponse = await request(app.server)
+      .get("/transactions")
+      .set("Cookie", cookies!)
+      .expect(200);
+
+    expect(ListTransactionResponse.body.transactions).toEqual([
+      expect.objectContaining({
+        title: "New transaction",
+        amount: 5000,
+      }),
+    ]);
+  });
+
+  it("should be able to get the summary", async () => {
+    const createTransactionResponse = await request(app.server)
+      .post("/transactions")
+      .send({
+        title: "Credit transaction",
+        amount: 5000,
+        type: "credit",
+      });
+
+    const cookies = createTransactionResponse.get("Set-Cookie");
+
+    await request(app.server)
+      .post("/transactions")
+      .set("Cookie", cookies!)
+      .send({
+        title: "Debit transaction",
+        amount: 2000,
+        type: "debit",
+      });
+
+    const summaryResponse = await request(app.server)
+      .get("/transactions/summary")
+      .set("Cookie", cookies!)
+      .expect(200);
+
+    expect(summaryResponse.body.summary).toEqual({
+      amount: 3000,
+    });
   });
 });
