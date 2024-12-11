@@ -1,4 +1,5 @@
-import { expect, it, beforeAll, afterAll, describe } from "vitest";
+import { expect, it, beforeAll, afterAll, describe, beforeEach } from "vitest";
+import { execSync } from "node:child_process";
 import request from "supertest";
 import { app } from "../src/app";
 
@@ -11,8 +12,13 @@ describe("Transactions routes", () => {
     await app.close();
   });
 
+  beforeEach(() => {
+    execSync("pnpm run kenex migrate:rollback --all");
+    execSync("pnpm run kenx migrate:latest");
+  });
+
   it("should be able to create anew  transaction", async () => {
-    await request(app.server)
+    const response = await request(app.server)
       .post("/transactions")
       .send({
         title: "New transaction",
@@ -35,7 +41,7 @@ describe("Transactions routes", () => {
 
     const ListTransactionResponse = await request(app.server)
       .get("/transactions")
-      .set("Cookie", cookies)
+      .set("Cookie", cookies!)
       .expect(200);
 
     expect(ListTransactionResponse.body.transaction).toEqual([
